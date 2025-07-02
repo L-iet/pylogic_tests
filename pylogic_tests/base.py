@@ -1,5 +1,5 @@
 from typing import Self
-from pylogic.base import _PylogicObject, to_dict
+from pylogic.base import _PylogicObject
 import json
 import pytest
 from unittest.mock import patch
@@ -421,3 +421,238 @@ class TestReplace:
             ],
         )
         assert obj5.children == [obj4, obj1b, obj3]
+
+
+class TestDictConstruction:
+    def t_to_dict(self):
+        """
+        Should convert the object to a dictionary representation.
+        """
+        _, _, _, _, obj5 = setup()
+        expected_dict = {
+            "class_module": "pylogic_tests.base",
+            "class_name": "FakePylogicObject",
+            "name": "5",
+            "children": [
+                {
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                    "name": "4",
+                    "children": [
+                        {
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                            "name": "3",
+                            "children": [
+                                {
+                                    "class_module": "pylogic_tests.base",
+                                    "class_name": "FakePylogicObject",
+                                    "name": "1",
+                                    "children": [],
+                                },
+                                {
+                                    "class_module": "pylogic_tests.base",
+                                    "class_name": "FakePylogicObject",
+                                    "name": "2",
+                                    "children": [],
+                                },
+                            ],
+                        },
+                        {
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                            "name": "2",
+                            "children": [],
+                        },
+                    ],
+                },
+                {
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                    "name": "1",
+                    "children": [],
+                },
+                {
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                    "name": "3",
+                    "children": [
+                        {
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                            "name": "1",
+                            "children": [],
+                        },
+                        {
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                            "name": "2",
+                            "children": [],
+                        },
+                    ],
+                },
+            ],
+        }
+        assert obj5.to_dict() == expected_dict
+
+    def t_from_dict(self):
+        """
+        Should create an object from a dictionary representation.
+        """
+        _, _, _, _, obj5 = setup()
+        dict_ = {
+            "class_module": "pylogic_tests.base",
+            "class_name": "FakePylogicObject",
+            "name": "5",
+            "children": [
+                {
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                    "name": "4",
+                    "children": [
+                        {
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                            "name": "3",
+                            "children": [
+                                {
+                                    "class_module": "pylogic_tests.base",
+                                    "class_name": "FakePylogicObject",
+                                    "name": "1",
+                                    "children": [],
+                                },
+                                {
+                                    "class_module": "pylogic_tests.base",
+                                    "class_name": "FakePylogicObject",
+                                    "name": "2",
+                                    "children": [],
+                                },
+                            ],
+                        },
+                        {
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                            "name": "2",
+                            "children": [],
+                        },
+                    ],
+                },
+                {
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                    "name": "1",
+                    "children": [],
+                },
+                {
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                    "name": "3",
+                    "children": [
+                        {
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                            "name": "1",
+                            "children": [],
+                        },
+                        {
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                            "name": "2",
+                            "children": [],
+                        },
+                    ],
+                },
+            ],
+        }
+        new_obj = FakePylogicObject.from_dict(dict_)
+        assert new_obj == obj5
+
+    def t_dict_to_constructor_args(self):
+        """
+        Should convert a dictionary representation to constructor arguments.
+        """
+        _, _, _, _, obj5 = setup()
+        dict_ = {
+            "class_module": "pylogic_tests.base",
+            "class_name": "FakePylogicObject",
+            "name": "5",
+            "children": [
+                {
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                    "name": "4",
+                    "children": [
+                        {
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                            "name": "3",
+                            "children": [
+                                {
+                                    "class_module": "pylogic_tests.base",
+                                    "class_name": "FakePylogicObject",
+                                    "name": "1",
+                                    "children": [],
+                                },
+                                {
+                                    "class_module": "pylogic_tests.base",
+                                    "class_name": "FakePylogicObject",
+                                    "name": "2",
+                                    "children": [],
+                                },
+                            ],
+                        },
+                        {
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                            "name": "2",
+                            "children": [],
+                        },
+                    ],
+                },
+                {
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                    "name": "1",
+                    "children": [],
+                },
+                {
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                    "name": "3",
+                    "children": [
+                        {
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                            "name": "1",
+                            "children": [],
+                        },
+                        {
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                            "name": "2",
+                            "children": [],
+                        },
+                    ],
+                },
+            ],
+        }
+        kwargs = FakePylogicObject.dict_to_constructor_args(dict_)
+        assert kwargs == {
+            "name": "5",
+            "children": [
+                FakePylogicObject(
+                    "4",
+                    children=[
+                        FakePylogicObject(
+                            "3",
+                            children=[FakePylogicObject("1"), FakePylogicObject("2")],
+                        ),
+                        FakePylogicObject("2"),
+                    ],
+                ),
+                FakePylogicObject("1"),
+                FakePylogicObject(
+                    "3", children=[FakePylogicObject("1"), FakePylogicObject("2")]
+                ),
+            ],
+        }
