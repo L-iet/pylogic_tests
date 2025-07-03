@@ -104,6 +104,14 @@ class TestInitialization:
         assert obj4.children == [obj3, obj2]
         assert obj5.children == [obj4, obj1, obj3]
 
+    def t_leaves(self):
+        obj1, obj2, obj3, obj4, obj5 = setup()
+        assert obj1.leaves == []
+        assert obj2.leaves == []
+        assert obj3.leaves == [obj1, obj2]
+        assert obj4.leaves == [obj1, obj2, obj2]
+        assert obj5.leaves == [obj1, obj2, obj2, obj1, obj1, obj2]
+
 
 def t_hash():
     """
@@ -159,6 +167,81 @@ class TestReplace:
                 FakePylogicObject("2"),
                 FakePylogicObject(
                     "3", children=[FakePylogicObject("2"), FakePylogicObject("2")]
+                ),
+            ],
+        )
+        assert obj5.children == [obj4, obj1, obj3]
+
+    def t_replace_all_multiple_replacements_positions_none(self):
+        """
+        Should replace old (all) instances of obj1 with obj2 and old instances of
+        obj2 with obj3 in obj5.
+        """
+        obj1, obj2, obj3, obj4, obj5 = setup()
+        new_obj = obj5.replace({obj1: obj2, obj2: obj3})
+        assert new_obj == FakePylogicObject(
+            "5",
+            children=[
+                FakePylogicObject(
+                    "4",
+                    children=[
+                        FakePylogicObject(
+                            "3",
+                            children=[
+                                FakePylogicObject("2"),
+                                FakePylogicObject(
+                                    "3",
+                                    children=[
+                                        FakePylogicObject("1"),
+                                        FakePylogicObject("2"),
+                                    ],
+                                ),
+                            ],
+                        ),
+                        FakePylogicObject(
+                            "3",
+                            children=[FakePylogicObject("1"), FakePylogicObject("2")],
+                        ),
+                    ],
+                ),
+                FakePylogicObject("2"),
+                FakePylogicObject(
+                    "3",
+                    children=[
+                        FakePylogicObject("2"),
+                        FakePylogicObject(
+                            "3",
+                            children=[FakePylogicObject("1"), FakePylogicObject("2")],
+                        ),
+                    ],
+                ),
+            ],
+        )
+        assert obj5.children == [obj4, obj1, obj3]
+
+    def t_replace_all_cyclic_replacements_positions_none(self):
+        """
+        Should permute the replacements in a cyclic manner, replacing obj1 with obj2
+        and obj2 with obj1 in obj5.
+        """
+        obj1, obj2, obj3, obj4, obj5 = setup()
+        new_obj = obj5.replace({obj1: obj2, obj2: obj1})
+        assert new_obj == FakePylogicObject(
+            "5",
+            children=[
+                FakePylogicObject(
+                    "4",
+                    children=[
+                        FakePylogicObject(
+                            "3",
+                            children=[FakePylogicObject("2"), FakePylogicObject("1")],
+                        ),
+                        FakePylogicObject("1"),
+                    ],
+                ),
+                FakePylogicObject("2"),
+                FakePylogicObject(
+                    "3", children=[FakePylogicObject("2"), FakePylogicObject("1")]
                 ),
             ],
         )
@@ -430,68 +513,173 @@ class TestDictConstruction:
         """
         _, _, _, _, obj5 = setup()
         expected_dict = {
-            "class_module": "pylogic_tests.base",
-            "class_name": "FakePylogicObject",
-            "name": "5",
             "children": [
                 {
-                    "class_module": "pylogic_tests.base",
-                    "class_name": "FakePylogicObject",
-                    "name": "4",
                     "children": [
                         {
-                            "class_module": "pylogic_tests.base",
-                            "class_name": "FakePylogicObject",
-                            "name": "3",
                             "children": [
                                 {
+                                    "children": [],
+                                    "leaves": [],
+                                    "name": "1",
                                     "class_module": "pylogic_tests.base",
                                     "class_name": "FakePylogicObject",
-                                    "name": "1",
-                                    "children": [],
                                 },
                                 {
+                                    "children": [],
+                                    "leaves": [],
+                                    "name": "2",
                                     "class_module": "pylogic_tests.base",
                                     "class_name": "FakePylogicObject",
-                                    "name": "2",
-                                    "children": [],
                                 },
                             ],
-                        },
-                        {
+                            "leaves": [
+                                {
+                                    "children": [],
+                                    "leaves": [],
+                                    "name": "1",
+                                    "class_module": "pylogic_tests.base",
+                                    "class_name": "FakePylogicObject",
+                                },
+                                {
+                                    "children": [],
+                                    "leaves": [],
+                                    "name": "2",
+                                    "class_module": "pylogic_tests.base",
+                                    "class_name": "FakePylogicObject",
+                                },
+                            ],
+                            "name": "3",
                             "class_module": "pylogic_tests.base",
                             "class_name": "FakePylogicObject",
-                            "name": "2",
+                        },
+                        {
                             "children": [],
+                            "leaves": [],
+                            "name": "2",
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
                         },
                     ],
-                },
-                {
+                    "leaves": [
+                        {
+                            "children": [],
+                            "leaves": [],
+                            "name": "1",
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                        },
+                        {
+                            "children": [],
+                            "leaves": [],
+                            "name": "2",
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                        },
+                        {
+                            "children": [],
+                            "leaves": [],
+                            "name": "2",
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                        },
+                    ],
+                    "name": "4",
                     "class_module": "pylogic_tests.base",
                     "class_name": "FakePylogicObject",
-                    "name": "1",
+                },
+                {
                     "children": [],
-                },
-                {
+                    "leaves": [],
+                    "name": "1",
                     "class_module": "pylogic_tests.base",
                     "class_name": "FakePylogicObject",
-                    "name": "3",
+                },
+                {
                     "children": [
                         {
+                            "children": [],
+                            "leaves": [],
+                            "name": "1",
                             "class_module": "pylogic_tests.base",
                             "class_name": "FakePylogicObject",
-                            "name": "1",
-                            "children": [],
                         },
                         {
+                            "children": [],
+                            "leaves": [],
+                            "name": "2",
                             "class_module": "pylogic_tests.base",
                             "class_name": "FakePylogicObject",
-                            "name": "2",
-                            "children": [],
                         },
                     ],
+                    "leaves": [
+                        {
+                            "children": [],
+                            "leaves": [],
+                            "name": "1",
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                        },
+                        {
+                            "children": [],
+                            "leaves": [],
+                            "name": "2",
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
+                        },
+                    ],
+                    "name": "3",
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
                 },
             ],
+            "leaves": [
+                {
+                    "children": [],
+                    "leaves": [],
+                    "name": "1",
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                },
+                {
+                    "children": [],
+                    "leaves": [],
+                    "name": "2",
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                },
+                {
+                    "children": [],
+                    "leaves": [],
+                    "name": "2",
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                },
+                {
+                    "children": [],
+                    "leaves": [],
+                    "name": "1",
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                },
+                {
+                    "children": [],
+                    "leaves": [],
+                    "name": "1",
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                },
+                {
+                    "children": [],
+                    "leaves": [],
+                    "name": "2",
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
+                },
+            ],
+            "name": "5",
+            "class_module": "pylogic_tests.base",
+            "class_name": "FakePylogicObject",
         }
         assert obj5.to_dict() == expected_dict
 
@@ -501,73 +689,73 @@ class TestDictConstruction:
         """
         _, _, _, _, obj5 = setup()
         dict_ = {
-            "class_module": "pylogic_tests.base",
-            "class_name": "FakePylogicObject",
-            "name": "5",
             "children": [
                 {
-                    "class_module": "pylogic_tests.base",
-                    "class_name": "FakePylogicObject",
-                    "name": "4",
                     "children": [
                         {
-                            "class_module": "pylogic_tests.base",
-                            "class_name": "FakePylogicObject",
-                            "name": "3",
                             "children": [
                                 {
+                                    "children": [],
+                                    "name": "1",
                                     "class_module": "pylogic_tests.base",
                                     "class_name": "FakePylogicObject",
-                                    "name": "1",
-                                    "children": [],
                                 },
                                 {
+                                    "children": [],
+                                    "name": "2",
                                     "class_module": "pylogic_tests.base",
                                     "class_name": "FakePylogicObject",
-                                    "name": "2",
-                                    "children": [],
                                 },
                             ],
-                        },
-                        {
+                            "name": "3",
                             "class_module": "pylogic_tests.base",
                             "class_name": "FakePylogicObject",
-                            "name": "2",
+                        },
+                        {
                             "children": [],
+                            "name": "2",
+                            "class_module": "pylogic_tests.base",
+                            "class_name": "FakePylogicObject",
                         },
                     ],
-                },
-                {
+                    "name": "4",
                     "class_module": "pylogic_tests.base",
                     "class_name": "FakePylogicObject",
-                    "name": "1",
+                },
+                {
                     "children": [],
-                },
-                {
+                    "name": "1",
                     "class_module": "pylogic_tests.base",
                     "class_name": "FakePylogicObject",
-                    "name": "3",
+                },
+                {
                     "children": [
                         {
+                            "children": [],
+                            "name": "1",
                             "class_module": "pylogic_tests.base",
                             "class_name": "FakePylogicObject",
-                            "name": "1",
-                            "children": [],
                         },
                         {
+                            "children": [],
+                            "name": "2",
                             "class_module": "pylogic_tests.base",
                             "class_name": "FakePylogicObject",
-                            "name": "2",
-                            "children": [],
                         },
                     ],
+                    "name": "3",
+                    "class_module": "pylogic_tests.base",
+                    "class_name": "FakePylogicObject",
                 },
             ],
+            "name": "5",
+            "class_module": "pylogic_tests.base",
+            "class_name": "FakePylogicObject",
         }
         new_obj = FakePylogicObject.from_dict(dict_)
         assert new_obj == obj5
 
-    def t_dict_to_constructor_args(self):
+    def t_dict_to_constructor_kwargs(self):
         """
         Should convert a dictionary representation to constructor arguments.
         """
@@ -636,7 +824,7 @@ class TestDictConstruction:
                 },
             ],
         }
-        kwargs = FakePylogicObject.dict_to_constructor_args(dict_)
+        kwargs = FakePylogicObject.dict_to_constructor_kwargs(dict_)
         assert kwargs == {
             "name": "5",
             "children": [
