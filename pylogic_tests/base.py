@@ -9,6 +9,7 @@ import copy
 class FakePylogicObject(_PylogicObject):
     child_independent_attrs = _PylogicObject.child_independent_attrs + ("name",)
     child_dependent_attrs = _PylogicObject.child_dependent_attrs
+    hash_attrs = _PylogicObject.hash_attrs + ("name",)
     __slots__ = child_dependent_attrs + child_independent_attrs
 
     def __init__(
@@ -19,17 +20,6 @@ class FakePylogicObject(_PylogicObject):
     ):
         super().__init__(children=children, name=name, **kwargs)
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, FakePylogicObject):
-            return NotImplemented
-        return self.name == other.name and self.children == other.children
-
-    def __hash__(self) -> int:
-        return hash((self.name, *self.children))
-
-    def __repr__(self) -> str:
-        return f"MockPylogicObject({self.name}, children={self.children})"
-
     def update_child_dependent_attrs(self) -> None:
         return super().update_child_dependent_attrs()
 
@@ -38,6 +28,16 @@ class FakePylogicObject(_PylogicObject):
 
     def update_child_independent_attrs(self, reference_object: Self) -> None:
         self.name = reference_object.name
+
+
+class FakeSubclass(FakePylogicObject): ...
+
+
+class FakeSubclass2(FakePylogicObject):
+    child_independent_attrs = FakePylogicObject.child_independent_attrs + (
+        "extra_attr",
+    )
+    __slots__ = FakePylogicObject.child_dependent_attrs + child_independent_attrs
 
 
 def setup():
@@ -111,6 +111,67 @@ class TestInitialization:
         assert obj3.leaves == [obj1, obj2]
         assert obj4.leaves == [obj1, obj2, obj2]
         assert obj5.leaves == [obj1, obj2, obj2, obj1, obj1, obj2]
+
+
+class TestEquality:
+    def t_equal(self):
+        """
+        Should be equal to another object with the same structure
+        """
+        _, _, _, _, obj5 = setup()
+        _, _, _, _, obj5_copy = setup()
+        assert obj5 == obj5_copy
+
+    def t_not_equal_different_name(self):
+        """
+        Should not be equal to another object with a different name.
+        """
+        _, _, _, _, obj5 = setup()
+        obj6 = FakePylogicObject("6", children=obj5.children)
+        assert obj5 != obj6
+
+    def t_not_equal_different_class(self):
+        """
+        Should not be equal to another object from a different class.
+        """
+        _, _, _, _, obj5 = setup()
+        obj5subclass = FakeSubclass("5", children=obj5.children)
+        assert obj5 != obj5subclass
+
+    def t_equal_up_to_subclass(self):
+        """
+        Should be equal to another object with the same structure, ignoring subclass differences.
+        """
+        _, _, _, _, obj5 = setup()
+        obj5subclass = FakeSubclass("5", children=obj5.children)
+        assert obj5 != obj5subclass
+        assert obj5.equal_up_to_subclass(obj5subclass)
+        assert obj5subclass.equal_up_to_subclass(obj5)
+
+    def t_equal_child_independent_attrs(self):
+        """
+        Child-independent attributes should be equal here.
+        """
+        _, _, _, _, obj5 = setup()
+        obj5subclass = FakeSubclass("5", children=[])
+        assert obj5.eq_child_independent_attrs(obj5subclass)
+
+    def t_not_equal_child_independent_attrs_values(self):
+        """
+        Child-independent attributes should not be equal here.
+        """
+        _, _, _, _, obj5 = setup()
+        obj5subclass = FakeSubclass("6", children=[])
+        assert not obj5.eq_child_independent_attrs(obj5subclass)
+
+    def t_not_equal_child_independent_attrs_names(self):
+        """
+        Child-independent attributes should not be equal here.
+        """
+        # FakeSubclass2 has an extra attribute 'extra_attr'
+        _, _, _, _, obj5 = setup()
+        obj5subclass = FakeSubclass2("5", children=[])
+        assert not obj5.eq_child_independent_attrs(obj5subclass)
 
 
 def t_hash():
@@ -273,6 +334,7 @@ class TestReplace:
             ],
         )
         assert obj5.children == [obj4, obj1, obj3]
+        assert new_obj == obj5
 
     def t_replace_positions_empty(self):
         """
@@ -280,6 +342,34 @@ class TestReplace:
         """
         obj1, obj2, obj3, obj4, obj5 = setup()
         new_obj = obj5.replace({obj1: obj2}, positions=[])
+        assert new_obj == FakePylogicObject(
+            "5",
+            children=[
+                FakePylogicObject(
+                    "4",
+                    children=[
+                        FakePylogicObject(
+                            "3",
+                            children=[FakePylogicObject("1"), FakePylogicObject("2")],
+                        ),
+                        FakePylogicObject("2"),
+                    ],
+                ),
+                FakePylogicObject("1"),
+                FakePylogicObject(
+                    "3", children=[FakePylogicObject("1"), FakePylogicObject("2")]
+                ),
+            ],
+        )
+        assert obj5.children == [obj4, obj1, obj3]
+        assert new_obj == obj5
+
+    def t_replace_all_positions_empty_dict(self):
+        """
+        Should not replace anything.
+        """
+        obj1, obj2, obj3, obj4, obj5 = setup()
+        new_obj = obj5.replace({})
         assert new_obj == FakePylogicObject(
             "5",
             children=[
@@ -844,3 +934,164 @@ class TestDictConstruction:
                 ),
             ],
         }
+
+
+class TestUnify:
+    """
+    Basic object = object that can serve as a key in the unification dict.
+    By default, basic objects are objects with no children. Can be modified with
+    the `key_check` parameter.
+
+    Complex object = not a basic object.
+    """
+
+    def t_eq_basic(self):
+        """
+        Should unify two objects that are equal.
+        """
+        obj1 = FakePylogicObject("1")
+        obj1b = FakePylogicObject("1")
+        unified = obj1.unify(obj1b)
+        assert bool(unified)
+        assert unified == {}
+
+    def t_eq_complex(self):
+        """
+        Should unify two objects that are equal.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2", children=[obj1])
+        obj2b = FakePylogicObject("2", children=[obj1])
+        unified = obj2.unify(obj2b)
+        assert bool(unified)
+        assert unified == {}
+
+    def t_basic_to_complex(self):
+        """
+        basic.unify(complex) should return {basic: complex}
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2", children=[obj1])
+        obj3 = FakePylogicObject("3", children=[obj1, obj2])
+        obj4 = FakePylogicObject("4")
+        unified = obj4.unify(obj3)
+        assert unified == {obj4: obj3}
+
+    def t_no_basic_on_lhs(self):
+        """
+        If `unify` is called on something that has no basic objects, should
+        return `None`.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2", children=[obj1])
+        obj3 = FakePylogicObject("3", children=[obj1, obj2])
+        obj4 = FakePylogicObject("4")
+        unified = obj4.unify(obj3, key_check=lambda o: o.name == "1")  # type: ignore
+        assert unified is None
+
+    def t_complex_unification(self):
+        """
+        Should find a unification, if possible.
+        """
+        # obj1 unifies to obj1b but should not be included in the unification dict
+        # because they are equal.
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3")
+        obj4 = FakePylogicObject("4", children=[obj2, obj3])
+        obj5 = FakePylogicObject("5", children=[obj4, obj1])
+
+        obj1b = FakePylogicObject("1")
+        objd = FakePylogicObject("d")
+        obje = FakePylogicObject("e")
+        objf = FakePylogicObject("f")
+        objg = FakePylogicObject("g")
+        objh = FakePylogicObject("h")
+        objb = FakePylogicObject("b", children=[objd, obje, objf])
+        objc = FakePylogicObject("c", children=[objg, objh])
+        obj4b = FakePylogicObject("4", children=[objb, objc])
+        obj5b = FakePylogicObject("5", children=[obj4b, obj1b])
+
+        unified = obj5.unify(obj5b)
+        assert unified == {obj2: objb, obj3: objc}
+
+    def t_complex_unification_different_keycheck(self):
+        """
+        Should find a unification, if possible, with a different `key_check`
+        parameter.
+        """
+        var_obj1 = FakePylogicObject("var_1")
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3")
+        var_obj4 = FakePylogicObject("var_4", children=[obj2, obj3])
+        obj5 = FakePylogicObject("5", children=[var_obj4, var_obj1])
+
+        obj1b = FakePylogicObject("1")
+        objd = FakePylogicObject("d")
+        obje = FakePylogicObject("e")
+        objf = FakePylogicObject("f")
+        objg = FakePylogicObject("g")
+        objh = FakePylogicObject("h")
+        objb = FakePylogicObject("b", children=[objd, obje, objf])
+        objc = FakePylogicObject("c", children=[objg, objh])
+        obj4b = FakePylogicObject("4", children=[objb, objc])
+        obj5b = FakePylogicObject("5", children=[obj4b, obj1b])
+
+        unified = obj5.unify(obj5b, key_check=lambda o: o.name.startswith("var_"))  # type: ignore
+        assert unified == {var_obj1: obj1b, var_obj4: obj4b}
+
+    def t_complex_unification_impossible(self):
+        """
+        Should find a unification, if possible (not in this case).
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3")
+        obj4 = FakePylogicObject("4", children=[obj2, obj3])
+        obj5 = FakePylogicObject("5", children=[obj4, obj1])
+
+        obj1b = FakePylogicObject("1")
+        objd = FakePylogicObject("d")
+        obje = FakePylogicObject("e")
+        objf = FakePylogicObject("f")
+        objg = FakePylogicObject("g")
+        objh = FakePylogicObject("h")
+        obji = FakePylogicObject("i")  # extra child
+        objb = FakePylogicObject("b", children=[objd, obje, objf])
+        objc = FakePylogicObject("c", children=[objg, objh])
+        obj4b = FakePylogicObject("4", children=[objb, objc, obji])
+        obj5b = FakePylogicObject("5", children=[obj4b, obj1b])
+
+        unified = obj5.unify(obj5b)
+        assert unified is None
+
+    def t_unification_replacement(self):
+        """
+        Check that unification followed by replacement works as expected.
+        ```
+        unif = a.unify(b)
+        a.replace(unif) == b
+        ```
+        """
+        # obj1 unifies to obj1b but should not be included in the unification dict
+        # because they are equal.
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3")
+        obj4 = FakePylogicObject("4", children=[obj2, obj3])
+        obj5 = FakePylogicObject("5", children=[obj4, obj1])
+
+        obj1b = FakePylogicObject("1")
+        objd = FakePylogicObject("d")
+        obje = FakePylogicObject("e")
+        objf = FakePylogicObject("f")
+        objg = FakePylogicObject("g")
+        objh = FakePylogicObject("h")
+        objb = FakePylogicObject("b", children=[objd, obje, objf])
+        objc = FakePylogicObject("c", children=[objg, objh])
+        obj4b = FakePylogicObject("4", children=[objb, objc])
+        obj5b = FakePylogicObject("5", children=[obj4b, obj1b])
+
+        unified = obj5.unify(obj5b)
+        assert unified == {obj2: objb, obj3: objc}
+        assert obj5.replace(unified) == obj5b  # type: ignore
