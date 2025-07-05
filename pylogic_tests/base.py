@@ -345,6 +345,42 @@ class TestReplace:
         assert new_obj == FakePylogicObject("2")
         assert obj5.children == [obj4, obj1, obj3]
 
+    def t_replace_positions_has_empty_root_not_key(self):
+        """
+        Should replace according to the dict and positions.
+        """
+        obj1, obj2, obj3, obj4, obj5 = setup()
+        new_obj = obj5.replace({obj1: obj2}, positions=[[], [0]])
+        assert new_obj == FakePylogicObject(
+            "5",
+            children=[
+                FakePylogicObject(
+                    "4",
+                    children=[
+                        FakePylogicObject(
+                            "3",
+                            children=[FakePylogicObject("2"), FakePylogicObject("2")],
+                        ),
+                        FakePylogicObject("2"),
+                    ],
+                ),
+                FakePylogicObject("1"),
+                FakePylogicObject(
+                    "3", children=[FakePylogicObject("1"), FakePylogicObject("2")]
+                ),
+            ],
+        )
+        assert obj5.children == [obj4, obj1, obj3]
+
+    def t_replace_positions_has_empty_root_in_keys(self):
+        """
+        Should replace according to the dict and positions.
+        """
+        obj1, obj2, obj3, obj4, obj5 = setup()
+        new_obj = obj5.replace({obj5: obj2, obj1: obj2}, positions=[[0], []])
+        assert new_obj == FakePylogicObject("2")
+        assert obj5.children == [obj4, obj1, obj3]
+
     def t_replace_positions_empty(self):
         """
         Should not replace anything.
