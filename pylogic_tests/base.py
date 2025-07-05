@@ -308,9 +308,9 @@ class TestReplace:
         )
         assert obj5.children == [obj4, obj1, obj3]
 
-    def t_replace_all_positions_single_empty(self):
+    def t_replace_positions_single_empty_root_not_key(self):
         """
-        Should not replace anything.
+        Should replace only the root object if it matches (not in this case).
         """
         obj1, obj2, obj3, obj4, obj5 = setup()
         new_obj = obj5.replace({obj1: obj2}, positions=[[]])
@@ -336,12 +336,49 @@ class TestReplace:
         assert obj5.children == [obj4, obj1, obj3]
         assert new_obj == obj5
 
+    def t_replace_positions_single_empty_root_in_keys(self):
+        """
+        Should replace only the root object if it matches.
+        """
+        obj1, obj2, obj3, obj4, obj5 = setup()
+        new_obj = obj5.replace({obj5: obj2}, positions=[[]])
+        assert new_obj == FakePylogicObject("2")
+        assert obj5.children == [obj4, obj1, obj3]
+
     def t_replace_positions_empty(self):
         """
         Should not replace anything.
         """
         obj1, obj2, obj3, obj4, obj5 = setup()
         new_obj = obj5.replace({obj1: obj2}, positions=[])
+        assert new_obj == FakePylogicObject(
+            "5",
+            children=[
+                FakePylogicObject(
+                    "4",
+                    children=[
+                        FakePylogicObject(
+                            "3",
+                            children=[FakePylogicObject("1"), FakePylogicObject("2")],
+                        ),
+                        FakePylogicObject("2"),
+                    ],
+                ),
+                FakePylogicObject("1"),
+                FakePylogicObject(
+                    "3", children=[FakePylogicObject("1"), FakePylogicObject("2")]
+                ),
+            ],
+        )
+        assert obj5.children == [obj4, obj1, obj3]
+        assert new_obj == obj5
+
+    def t_replace_positions_empty_root_in_keys(self):
+        """
+        Should not replace anything.
+        """
+        obj1, obj2, obj3, obj4, obj5 = setup()
+        new_obj = obj5.replace({obj5: obj2}, positions=[])
         assert new_obj == FakePylogicObject(
             "5",
             children=[
