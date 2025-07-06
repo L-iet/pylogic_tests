@@ -1025,8 +1025,20 @@ class TestUnify:
         obj1 = FakePylogicObject("1")
         obj1b = FakePylogicObject("1")
         unified = obj1.unify(obj1b)
+        print(unified)
         assert bool(unified)
         assert unified == {}
+
+    def t_different_children_root_basic(self):
+        """
+        Should unify two objects.
+        """
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3")
+        obj1 = FakePylogicObject("1", children=[obj2])
+        obj1b = FakePylogicObject("1", children=[obj3])
+        unified = obj1.unify(obj1b, key_check=lambda o: o.name == "1")  # type: ignore
+        assert unified == {obj1: obj1b}
 
     def t_eq_complex(self):
         """
@@ -1168,3 +1180,67 @@ class TestUnify:
         unified = obj5.unify(obj5b)
         assert unified == {obj2: objb, obj3: objc}
         assert obj5.replace(unified) == obj5b  # type: ignore
+
+
+class TestMultiUnify:
+    def t_complex(self):
+        r"""
+        Should multi-unify two complex objects. These cannot be unified the regular
+        way. Unify
+
+                1
+               / \
+              2   c
+             /
+            d
+        with
+                     1
+                   / | \
+                  2  3  4
+                 /\     |
+                5  6    7
+        where c and d can match a list of objects, to get
+        {c: [3, 4], d: [5, 6]}
+        """
+        d = FakePylogicObject("d")
+        obj2_pattern = FakePylogicObject("2", children=[d])
+        c = FakePylogicObject("c")
+        obj1_pattern = FakePylogicObject("1", children=[obj2_pattern, c])
+
+        obj5 = FakePylogicObject("5")
+        obj6 = FakePylogicObject("6")
+        obj7 = FakePylogicObject("7")
+        obj2 = FakePylogicObject("2", children=[obj5, obj6])
+        obj3 = FakePylogicObject("3")
+        obj4 = FakePylogicObject("4", children=[obj7])
+        obj1 = FakePylogicObject("1", children=[obj2, obj3, obj4])
+
+        unified = obj1_pattern.multi_unify(
+            obj1, key_for_list_check=lambda o: o.name in ["c", "d"]  # type: ignore
+        )
+        assert unified == {c: [obj3, obj4], d: [obj5, obj6]}
+
+    def t_complex_unification_different_keycheck(self):
+        """
+        Multi-unify two complex objects with a different `key_check` parameter.
+        Should be same as unify with a different `key_check` parameter.
+        """
+        var_obj1 = FakePylogicObject("var_1")
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3")
+        var_obj4 = FakePylogicObject("var_4", children=[obj2, obj3])
+        obj5 = FakePylogicObject("5", children=[var_obj4, var_obj1])
+
+        obj1b = FakePylogicObject("1")
+        objd = FakePylogicObject("d")
+        obje = FakePylogicObject("e")
+        objf = FakePylogicObject("f")
+        objg = FakePylogicObject("g")
+        objh = FakePylogicObject("h")
+        objb = FakePylogicObject("b", children=[objd, obje, objf])
+        objc = FakePylogicObject("c", children=[objg, objh])
+        obj4b = FakePylogicObject("4", children=[objb, objc])
+        obj5b = FakePylogicObject("5", children=[obj4b, obj1b])
+
+        unified = obj5.multi_unify(obj5b, key_check=lambda o: o.name.startswith("var_"))  # type: ignore
+        assert unified == {var_obj1: obj1b, var_obj4: obj4b}
