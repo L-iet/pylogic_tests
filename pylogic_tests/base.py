@@ -1351,3 +1351,113 @@ class TestStringMatch:
         expected = []
         actual = matches_to_actual([], [1, 2, 3])
         assert actual == expected
+
+
+class TestSubobjectFind:
+    def t_root(self):
+        """
+        Should find the root object in the object tree.
+        """
+        obj = FakePylogicObject("1")
+        path = obj.subobject_find(obj)
+        assert path == []
+
+    def t_first_child(self):
+        """
+        Should find the first child in the object tree.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2", children=[obj1])
+        path = obj2.subobject_find(obj1)
+        assert path == [0]
+
+    def t_typical(self):
+        """
+        Should find a subobject in the object tree.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3", children=[obj1])
+        obj4 = FakePylogicObject("4", children=[obj2, obj3])
+        path = obj4.subobject_find(obj1)
+        assert path == [1, 0]
+
+    def t_typical_non_leaf(self):
+        """
+        Should find a non-leaf subobject in the object tree.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3", children=[obj1])
+        obj4 = FakePylogicObject("4", children=[obj2, obj3])
+        obj5 = FakePylogicObject("5", children=[obj1, obj4])
+        obj6 = FakePylogicObject("6", children=[obj5])
+        path = obj6.subobject_find(obj3)
+        assert path == [0, 1, 1]
+
+    def t_non_existent(self):
+        """
+        Should return None if the subobject does not exist in the object tree.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3", children=[obj1])
+        obj4 = FakePylogicObject("4", children=[obj2, obj3])
+        path = obj4.subobject_find(FakePylogicObject("5"))
+        assert path is None
+
+
+class TestSubobjectFindAll:
+    def t_root(self):
+        """
+        Should find the root object in the object tree.
+        """
+        obj = FakePylogicObject("1")
+        paths = obj.subobject_find_all(obj)
+        assert paths == [[]]
+
+    def t_first_child(self):
+        """
+        Should find the first child in the object tree.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2", children=[obj1])
+        paths = obj2.subobject_find_all(obj1)
+        assert paths == [[0]]
+
+    def t_typical(self):
+        """
+        Should find a subobject in the object tree.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3", children=[obj1])
+        obj4 = FakePylogicObject("4", children=[obj2, obj1])
+        obj5 = FakePylogicObject("5", children=[obj1])
+        obj6 = FakePylogicObject("6", children=[obj2, obj3, obj4, obj5])
+        paths = obj6.subobject_find_all(obj1)
+        assert paths == [[1, 0], [2, 1], [3, 0]]
+
+    def t_typical_non_leaf(self):
+        """
+        Should find a non-leaf subobject in the object tree.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3", children=[obj1])
+        obj4 = FakePylogicObject("4", children=[obj2, obj3])
+        obj5 = FakePylogicObject("5", children=[obj1, obj4])
+        obj6 = FakePylogicObject("6", children=[obj5, obj3])
+        paths = obj6.subobject_find_all(obj3)
+        assert paths == [[0, 1, 1], [1]]
+
+    def t_non_existent(self):
+        """
+        Should return an empty list if the subobject does not exist in the object tree.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3", children=[obj1])
+        obj4 = FakePylogicObject("4", children=[obj2, obj3])
+        paths = obj4.subobject_find_all(FakePylogicObject("5"))
+        assert paths == []
