@@ -1,6 +1,5 @@
 from typing import Self
-from pylogic.base import _PylogicObject
-import json
+from pylogic.base import _PylogicObject, string_match, matches_to_actual
 import pytest
 from unittest.mock import patch
 import copy
@@ -173,14 +172,13 @@ class TestEquality:
         obj5subclass = FakeSubclass2("5", children=[])
         assert not obj5.eq_child_independent_attrs(obj5subclass)
 
-
-def t_hash():
-    """
-    Should preserve the hash of the object.
-    """
-    _, _, _, _, obj5 = setup()
-    _, _, _, _, obj5_copy = setup()
-    assert hash(obj5) == hash(obj5_copy)
+    def t_hash(self):
+        """
+        Should preserve the hash of the object.
+        """
+        _, _, _, _, obj5 = setup()
+        _, _, _, _, obj5_copy = setup()
+        assert hash(obj5) == hash(obj5_copy)
 
 
 class TestCopyAndDeepcopy:
@@ -1040,7 +1038,7 @@ class TestUnify:
         unified = obj1.unify(obj1b, key_check=lambda o: o.name == "1")  # type: ignore
         assert unified == {obj1: obj1b}
 
-    def t_eq_complex(self):
+    def t_eq_complex_leaves_basic(self):
         """
         Should unify two objects that are equal.
         """
@@ -1050,6 +1048,28 @@ class TestUnify:
         unified = obj2.unify(obj2b)
         assert bool(unified)
         assert unified == {}
+
+    def t_eq_complex_no_basic(self):
+        """
+        Should unify two objects that are equal.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2", children=[obj1])
+        obj2b = FakePylogicObject("2", children=[obj1])
+        unified = obj2.unify(obj2b, key_check=lambda _: False)  # type: ignore
+        assert bool(unified)
+        assert unified == {}
+
+    def t_complex_no_basic(self):
+        """
+        Should be None when unequal and no basic.
+        """
+        obj1 = FakePylogicObject("1")
+        obj3 = FakePylogicObject("3")
+        obj2 = FakePylogicObject("2", children=[obj3])
+        obj2b = FakePylogicObject("2", children=[obj1])
+        unified = obj2.unify(obj2b, key_check=lambda _: False)  # type: ignore
+        assert unified is None
 
     def t_basic_to_complex(self):
         """
@@ -1183,11 +1203,42 @@ class TestUnify:
 
 
 class TestMultiUnify:
+    def t_multi_unify_on_multivar(self):
+        """
+        When called on a multi-var (key_for_list_check returns True),
+        should return a list.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2")
+
+        unified = obj1.multi_unify(
+            obj2, key_for_list_check=lambda o: o.name == "1"  # type: ignore
+        )
+        assert unified == {obj1: [obj2]}
+
+    def t_multivar_is_empty(self):
+        """
+        Should unify a multivar with an empty list when appropriate.
+        """
+        obj1 = FakePylogicObject("1")
+        obj2 = FakePylogicObject("2")
+        obj3 = FakePylogicObject("3")
+        obj4 = FakePylogicObject("4", children=[obj1, obj2, obj3])
+
+        obj1b = FakePylogicObject("1b")
+        obj3b = FakePylogicObject("3b")
+        obj4b = FakePylogicObject("4", children=[obj1b, obj3b])  # name should match
+
+        unified = obj4.multi_unify(
+            obj4b, key_for_list_check=lambda o: o.name == "2"  # type: ignore
+        )
+        assert unified == {obj1: obj1b, obj2: [], obj3: obj3b}
+
     def t_complex(self):
         r"""
         Should multi-unify two complex objects. These cannot be unified the regular
         way. Unify
-
+        ```
                 1
                / \
               2   c
@@ -1199,6 +1250,7 @@ class TestMultiUnify:
                   2  3  4
                  /\     |
                 5  6    7
+        ```
         where c and d can match a list of objects, to get
         {c: [3, 4], d: [5, 6]}
         """
@@ -1244,3 +1296,58 @@ class TestMultiUnify:
 
         unified = obj5.multi_unify(obj5b, key_check=lambda o: o.name.startswith("var_"))  # type: ignore
         assert unified == {var_obj1: obj1b, var_obj4: obj4b}
+
+
+class TestStringMatch:
+    def t_all_multi_var(self):
+        pattern = ["*a", "*b"]
+        target = [1, 2, 3]
+        is_multi_var = lambda x: x.startswith("*")
+        expected = [
+            {"*a": (0, 0), "*b": (0, 3)},
+            {"*a": (0, 1), "*b": (1, 3)},
+            {"*a": (0, 2), "*b": (2, 3)},
+            {"*a": (0, 3), "*b": (3, 3)},
+        ]
+        actual = string_match(pattern, target, is_multi_var=is_multi_var)
+        assert actual == expected
+
+        expected = [
+            {"*a": [], "*b": [1, 2, 3]},
+            {"*a": [1], "*b": [2, 3]},
+            {"*a": [1, 2], "*b": [3]},
+            {"*a": [1, 2, 3], "*b": []},
+        ]
+        actual = matches_to_actual(actual, target)
+        assert actual == expected
+
+    def t_typical(self):
+        pattern = ["a", "*b", "c", "*d"]
+        target = [1, 2, 3]
+        is_multi_var = lambda x: x.startswith("*")
+        expected = [
+            {"a": 0, "*b": (1, 1), "c": 1, "*d": (2, 3)},
+            {"a": 0, "*b": (1, 2), "c": 2, "*d": (3, 3)},
+        ]
+        actual = string_match(pattern, target, is_multi_var=is_multi_var)
+        assert actual == expected
+
+        expected = [
+            {"a": 1, "*b": [], "c": 2, "*d": [3]},
+            {"a": 1, "*b": [2], "c": 3, "*d": []},
+        ]
+        actual = matches_to_actual(actual, target)
+        assert actual == expected
+
+    def t_no_match(self):
+        pattern = ["a", "c"]
+        target = [1, 2, 3]
+        is_multi_var = lambda x: x.startswith("*")
+        expected = []
+        actual = string_match(pattern, target, is_multi_var=is_multi_var)
+        assert actual == expected
+
+    def t_matches_to_actual_empty(self):
+        expected = []
+        actual = matches_to_actual([], [1, 2, 3])
+        assert actual == expected
